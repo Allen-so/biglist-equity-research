@@ -43,6 +43,7 @@ cd biglist-equity-research
 python3.14 -m venv .venv
 source .venv/bin/activate
 python -m pip install -r requirements.txt
+python -m pip check
 python -m pytest -q
 python run_biglist.py --help
 ```
@@ -66,7 +67,7 @@ Use `--batch-size`, `--workers` (1–8), `--cache-dir` and `--output-dir` to con
 
 ## Verification and reproducibility
 
-The recorded local baseline is **272 passed, 11 skipped** on macOS / Python 3.14. The 11 skipped cases require private historical reports, which are not distributed. Enable `BIGLIST_PRIVATE_TESTS=1` only when those authorized fixtures are available. The linked GitHub Actions page is the authoritative remote CI status.
+The recorded local baseline is **275 passed, 11 skipped** on macOS / Python 3.14. The 11 skipped cases require private historical reports, which are not distributed. Enable `BIGLIST_PRIVATE_TESTS=1` only when those authorized fixtures are available. The linked GitHub Actions page is the authoritative remote CI status.
 
 This clean source distribution contains no bundled market-price dataset. Its hourly JSON fixture is explicitly synthetic and tests parsing behavior. Private production scans are not reproducible benchmarks for this checkout, and no trading accuracy, returns or alpha are claimed.
 
@@ -89,3 +90,18 @@ Project source and documentation are available under the [MIT License](LICENSE):
 Issues and pull requests are welcome. Include a reproducible example and relevant offline tests; do not commit credentials, provider dumps, private reports or caches. Changes to financial rules should explain their assumptions and remain distinct from performance claims.
 
 For research and education only. Not investment advice; software is provided without warranty.
+
+### v1.0.1 runtime dependency repair
+
+Pinned SciPy 1.18.1 for yfinance 1.7.0 price repair (NumPy 2.5.3).
+A fresh macOS Python 3.14 environment installed using requirements.txt passes
+pip check, CLI help, and the offline suite. Regression tests execute the
+multi-row Yahoo price-repair path without network access. CI also checks
+runtime imports and CLI startup.
+
+The limited run_biglist.py CLI produces CSV, Parquet and JSON, not HTML.
+The independent generate_daily_report.py renderer reads list CSVs from its
+outputs directory; a synthetic empty-list test verifies its HTML output.
+This does not validate daily.py publication or private historical fixtures;
+those 11 private-fixture tests remain skipped. Never point isolated tests at
+production Reports/Latest or production caches.
