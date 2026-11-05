@@ -1,0 +1,16 @@
+.venv/
+__pycache__/
+.pytest_cache/
+*.pyc
+*.parquet
+.env*
+/data/
+cache/
+Reports/
+outputs/
+logs/
+baseline/
+Golden/
+.DS_Store
+
+.audit/

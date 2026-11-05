@@ -1,0 +1,553 @@
+model:
+  name: "Big List Engine"
+  version: "1.0.0"
+
+universe:
+  min_price: 4.0
+  min_median_dollar_volume_20d: 8000000
+  min_history_days: 60
+  standard_history_lookback_days: 252
+
+timeframes:
+  primary: "1d"
+  context: "1w"
+  confirmation: "1h"
+
+atr:
+  period: 14
+
+moving_averages:
+  daily:
+    - 10
+    - 20
+    - 50
+    - 200
+  weekly:
+    - 10
+    - 20
+    - 40
+
+swing:
+  left_bars: 2
+  right_bars: 2
+  min_prominence_atr: 0.50
+  min_spacing_bars: 3
+  structure_equality_tolerance_atr: 0.15
+
+trendline:
+  min_anchors: 3
+  min_span_bars: 15
+  min_anchor_spacing_bars: 3
+
+  max_touch_distance_atr: 0.50
+  testing_distance_atr: 0.25
+
+  violation_buffer_atr: 0.35
+  max_major_violation_episodes: 1
+
+  min_abs_slope_atr_per_20bars: 0.15
+
+  reaction_lookahead_bars: 5
+  reaction_full_atr: 2.0
+
+  confidence:
+    anchor_count_full: 5
+    span_full_bars: 60
+    recency_full_bars: 10
+    recency_zero_bars: 100
+
+  max_lines_per_kind: 3
+
+zones:
+  cluster_distance_atr: 0.75
+  min_pivots: 2
+
+  confidence:
+    pivot_count_full: 5
+    prominence_full_atr: 2.0
+    recency_full_days: 14
+    recency_zero_days: 126
+    time_span_full_days: 90
+
+setup:
+  min_setup_score: 5
+
+  contraction:
+    atr_5_to_20_max: 0.75
+    range_5_to_20_max: 0.75
+
+  pullback:
+    min_depth_pct: 3.0
+    max_depth_pct: 15.0
+
+  volume_dryup:
+    volume_5_to_20_max: 0.80
+
+  re_expansion:
+    range_ratio_min: 1.30
+    volume_ratio_min: 1.50
+    close_location_min: 0.75
+
+tradability:
+  pivot_distance_atr:
+    ready_max: 0.80
+    developing_max: 1.80
+    watch_max: 2.50
+
+  extension_atr:
+    ideal_max: 1.00
+    acceptable_max: 2.00
+    caution_max: 2.50
+    hard_fail: 3.00
+
+  stop_distance_atr:
+    hard_fail: 3.00
+
+  min_reward_risk: 2.00
+
+market:
+  bollinger:
+    enabled_for_individual_stocks: false
+    period: 20
+    standard_deviations: 2.0
+    instruments:
+      - SPY
+      - QQQ
+      - IWM
+
+regime:
+  score_thresholds:
+    strong_risk_on: 75
+    constructive: 60
+    selective: 45
+
+  minimum_biglist_score:
+    strong_risk_on: 75
+    constructive: 77
+    selective: 80
+    defensive: 83
+
+multitimeframe:
+  weekly:
+    moving_averages:
+      - 10
+      - 20
+      - 40
+
+    swing:
+      left_bars: 2
+      right_bars: 2
+      min_prominence_atr: 0.50
+      min_spacing_bars: 2
+
+    trendline:
+      min_anchors: 3
+      min_span_bars: 8
+      min_anchor_spacing_bars: 2
+
+confluence:
+  cluster_distance_atr: 0.75
+  current_tolerance_atr: 0.20
+
+  min_evidence_families: 2
+  strong_evidence_families: 3
+  strong_timeframes: 2
+
+flow:
+  volume_baseline_days: 20
+  volume_zscore_days: 20
+
+  accumulation:
+    min_return_pct: 0.01
+    min_relative_volume: 1.20
+    min_close_location: 0.65
+
+  distribution:
+    max_return_pct: -0.01
+    min_relative_volume: 1.20
+    max_close_location: 0.35
+
+  dryup:
+    recent_days: 5
+    baseline_days: 20
+    max_ratio: 0.80
+
+  expansion:
+    min_relative_volume: 1.50
+    min_range_ratio: 1.30
+
+  gap:
+    min_abs_gap_pct: 0.02
+
+acceptance:
+  breakout:
+    lookback_days: 20
+    breakout_buffer_atr: 0.10
+
+    failure_buffer_atr: 0.35
+
+    accepted_min_holding_ratio: 0.67
+    accepted_min_retention: 0.50
+
+  structure_test:
+    touch_buffer_atr: 0.25
+    strong_close_location: 0.65
+    min_relative_volume: 1.00
+
+avwap:
+  max_recent_swing_highs: 2
+  max_recent_swing_lows: 2
+  max_recent_breakouts: 2
+
+  min_swing_prominence_atr: 0.75
+
+  interaction:
+    touch_buffer_atr: 0.20
+    side_tolerance_atr: 0.15
+    reclaim_buffer_atr: 0.10
+    strong_close_location: 0.65
+
+hourly_flow:
+  volume:
+    baseline_sessions: 20
+    min_history_sessions: 10
+
+    strong_session_relative_volume: 1.10
+    strong_slot_relative_volume: 1.20
+
+  vwap:
+    positive_distance_atr: 0.10
+    negative_distance_atr: -0.10
+
+    strong_above_ratio: 0.60
+    weak_above_ratio: 0.40
+
+  structure:
+    positive_balance_min: 1
+    negative_balance_max: -1
+
+  pullback:
+    healthy_down_up_volume_ratio_max: 0.80
+    weak_down_up_volume_ratio_min: 1.25
+
+  price_acceptance:
+    strong_close_location: 0.65
+    weak_close_location: 0.35
+
+  late_session:
+    bars: 2
+    strong_return_atr: 0.10
+    weak_return_atr: -0.10
+    strong_close_location: 0.65
+    weak_close_location: 0.35
+
+  confirmation:
+    supportive_min_positive: 4
+    negative_min_negative: 4
+    minimum_evidence_advantage: 2
+
+relative_strength:
+  windows:
+    - 5
+    - 10
+    - 20
+    - 60
+
+  persistent_weights:
+    5: 0.15
+    10: 0.20
+    20: 0.30
+    60: 0.35
+
+  strong_percentile: 75
+  leader_percentile: 80
+  elite_percentile: 90
+
+  rank_delta:
+    rs20_lookback_sessions: 10
+    rs60_lookback_sessions: 20
+
+velocity:
+  lookback_days: 252
+  recent_days: 20
+
+  impulse_windows:
+    - 5
+    - 10
+    - 20
+
+  impulse_weights:
+    5: 0.35
+    10: 0.35
+    20: 0.30
+
+  impulse_frequency:
+    return_5d_min: 0.08
+    return_10d_min: 0.12
+
+  time_to_gain:
+    target_10pct: 0.10
+    target_20pct: 0.20
+    horizon_10pct: 20
+    horizon_20pct: 40
+
+  decay:
+    recent_days: 20
+
+  directional_efficiency:
+    current_window: 20
+    historical_window: 10
+    historical_percentile: 0.75
+
+market_fit:
+  stress_lookback_sessions: 60
+  min_stress_sessions: 5
+
+  weights:
+    stress_relative_strength: 0.60
+    excess_vs_spy_20d: 0.40
+
+group:
+  minimum_group_size: 2
+
+  momentum_weights:
+    return_5d: 0.20
+    return_20d: 0.40
+    return_60d: 0.40
+
+  leadership_weights:
+    rs_20d: 0.40
+    rs_60d: 0.35
+    historical_velocity: 0.25
+
+setup:
+  min_setup_score: 5
+
+  contraction:
+    recent_days: 5
+    baseline_days: 20
+    atr_5_to_20_max: 0.75
+    range_5_to_20_max: 0.75
+
+  pullback:
+    lookback_days: 20
+    min_depth_pct: 0.03
+    max_depth_pct: 0.15
+    higher_low_tolerance_atr: 0.15
+
+  pivot:
+    min_age_bars: 5
+    max_age_bars: 30
+    cluster_lookback_bars: 30
+    cluster_distance_atr: 1.00
+    min_cluster_highs: 2
+
+  volume_dryup:
+    recent_days: 5
+    baseline_days: 20
+    max_ratio: 0.80
+
+  rs_retention:
+    rs20_min: 75
+    rs5_min: 50
+
+  re_expansion:
+    range_ratio_min: 1.30
+    volume_ratio_min: 1.50
+    close_location_min: 0.75
+
+tradability:
+  pivot_distance_atr:
+    ready_max: 0.80
+    developing_max: 1.80
+    watch_max: 2.50
+
+  extension_atr:
+    ideal_max: 1.00
+    acceptable_max: 2.00
+    caution_max: 2.50
+    hard_fail: 3.00
+
+  structural_stop:
+    buffer_atr: 0.25
+
+  stop_distance_atr:
+    ideal_max: 1.00
+    acceptable_max: 2.00
+    hard_fail: 3.00
+
+  overhead_room_atr:
+    strong_min: 4.00
+    acceptable_min: 2.00
+    limited_min: 1.00
+
+  min_reward_risk: 2.00
+
+  scoring:
+    extension: 1.50
+    pivot_proximity: 1.00
+    stop_efficiency: 1.00
+    overhead_room: 0.75
+    reward_risk: 0.75
+
+admission:
+  existing_leader:
+    rs20_min: 70
+    rs60_min: 70
+    velocity_min: 60
+    structure_min: 4
+
+    alternate:
+      rs20_min: 80
+      rs60_min: 60
+
+  emerging_leader:
+    return_5d_min: 0.07
+    return_10d_min: 0.10
+    volume_zscore_min: 1.50
+    rs20_rank_delta_min: 15
+    progress_retention_min: 0.50
+
+structure_gate:
+  broken:
+    minimum_fail_conditions: 3
+    sma50_slope_20d_max: -0.03
+
+  near_52w_low:
+    max_distance_pct: 0.10
+    emerging_leader_exempt: true
+
+scoring:
+  rank_delta:
+    full_improvement_points: 20
+
+  volatility:
+    atr_pct_multiplier:
+      below_2pct: 0.40
+      2_to_3pct: 0.70
+      3_to_8pct: 1.00
+      8_to_12pct: 0.85
+      above_12pct: 0.60
+
+  progress_retention:
+    bands:
+      below_35pct: 0.0
+      35_to_50pct: 2.0
+      50_to_65pct: 4.0
+      65_to_80pct: 5.5
+      above_80pct: 7.0
+
+  regime_minimum:
+    strong_risk_on: 75
+    constructive: 77
+    selective: 80
+    defensive: 83
+
+finalization:
+  capacity:
+    strong_risk_on:
+      min: 45
+      max: 70
+
+    constructive:
+      min: 35
+      max: 55
+
+    selective:
+      min: 20
+      max: 40
+
+    defensive:
+      min: 10
+      max: 25
+
+  biglist_classes:
+    - READY
+    - DEVELOPING
+
+  hourly:
+    negative_downgrade: true
+
+market_regime:
+  index_trend:
+    weight: 30
+
+  breadth:
+    weight: 30
+
+    above_sma20:
+      full_score_fraction: 0.75
+      zero_score_fraction: 0.25
+
+    above_sma50:
+      full_score_fraction: 0.70
+      zero_score_fraction: 0.20
+
+  leadership_breadth:
+    weight: 20
+    rs20_min: 80
+    zero_score_fraction: 0.02
+    full_score_fraction: 0.18
+
+  risk_participation:
+    weight: 20
+
+    iwm_vs_spy:
+      weight: 8
+      zero_score: -0.05
+      full_score: 0.05
+
+    median_return_20d:
+      weight: 6
+      zero_score: -0.10
+      full_score: 0.10
+
+    high_low_balance_60d:
+      weight: 6
+      zero_score: -0.20
+      full_score: 0.20
+
+  regime_thresholds:
+    strong_risk_on: 75
+    constructive: 60
+    selective: 45
+
+  bollinger:
+    window: 20
+    std_multiplier: 2.0
+    bandwidth_percentile_lookback: 120
+    squeeze_percentile: 20
+    expansion_percentile: 80
+
+fundamental_delta:
+  component_weights:
+    revenue_yoy: 0.25
+    revenue_acceleration: 0.15
+    eps_surprise: 0.20
+    operating_margin_delta: 0.20
+    earnings_reaction: 0.20
+
+  minimum_coverage_weight: 0.80
+
+  scoring:
+    revenue_yoy:
+      zero_at: -0.10
+      full_at: 0.30
+
+    revenue_acceleration:
+      zero_at: -0.10
+      full_at: 0.15
+
+    eps_surprise:
+      zero_at: -0.20
+      full_at: 0.20
+
+    operating_margin_delta:
+      zero_at: -0.05
+      full_at: 0.05
+
+    earnings_reaction:
+      return_zero_at: -0.10
+      return_full_at: 0.10
+      volume_low: 0.50
+      volume_high: 2.00

@@ -1,0 +1,16 @@
+factors:
+  market_fit: 4
+  group_fit: 3
+  structure: 8
+  monster_quality: 7
+  volatility: 7
+  historical_velocity: 8
+  productive_volatility: 8
+  supply_demand: 7
+  progress_retention: 7
+  persistent_rs: 10
+  rank_level_delta: 6
+  group_leadership: 5
+  fundamental_delta: 5
+  setup_quality: 10
+  tradability: 5
