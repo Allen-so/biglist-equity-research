@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""GPT Big List web-first *preflight* v0.2 (NOT final 26-factor scoring).
+"""GPT Big List web-first *preflight* v0.3 (NOT final 26-factor scoring).
 
 Uses the public web site's US stock scanner for cheap technical columns.
 Does not bypass authentication or paywalls; fails closed when feed is blocked.
-Every US-listed common-stock-like ticker is evaluated across 8 OR lanes.
+Every US-listed common-stock-like ticker is evaluated across 9 OR lanes.
 Exports candidate and coverage audit; no score, final eligibility or buy signal.
 """
 from __future__ import annotations
@@ -60,7 +60,7 @@ def get_tv_all():
     total=None
     begin=time.monotonic()
     for offset in range(0,20000,step):
-        req={"filter":[{"left":"type","operation":"equal","right":"stock"}],
+        req={"filter":[{"left":"exchange","operation":"in_range","right":["NYSE","NASDAQ","AMEX"]},{"left":"type","operation":"in_range","right":["stock","dr"]}],
              "symbols":{"query":{"types":[]}},
              "columns":COLUMNS,
              "sort":{"sortBy":"name","sortOrder":"asc"},
@@ -106,7 +106,7 @@ def write_csv(path,rows,fields):
         for r in rows:w.writerow({k:r.get(k) for k in fields})
 
 def is_us_listed(row):
-    return row.get("exchange") in US_EXCH and row.get("type")=="stock"
+    return row.get("exchange") in US_EXCH and row.get("type") in {"stock","dr"}
 
 def get_scope_reason(row):
     if not is_us_listed(row):return "NOT_TARGET_US_EXCHANGE_OR_TYPE"
@@ -133,6 +133,7 @@ def label(row,sector_median):
     B["F_RECOVERY_RESCUE"]=gt(r20,.12) and ge(q20,.88) and ge(q50,.86)
     B["G_YOUNG_OR_SHORT_HISTORY"]=(q200 is None) and ge(q20,.95) and gt(r20,.02) and gt(rvol,1.1)
     B["H_MODERATE_REPAIR"]=between(q20,.95,1.08) and gt(q50,.98) and gt(r20,.03) and gt(rvol,1)
+    B["I_STRONG_LOW_VOLUME_HOLD"]=gt(q20,1.04) and gt(q50,1.03) and gt(r5,0) and gt(r20,0) and between(rvol,0,1.2)
     return [k for k,v in B.items() if v]
 
 def cross_check_close(rows):
@@ -229,9 +230,11 @@ def main():
     with (OUTPUT/"web_preflight_summary.json").open("w") as f:
         json.dump({
           "asof_requested":ASOF,
-          "product":"GPT Big List - Web First preflight v0.2",
+          "product":"GPT Big List - Web First preflight v0.3",
           "is_formal_26_layer_final":False,
           "source":"TradingView website public scan endpoint; unofficial/availability not guaranteed",
+          "security_types":["stock","dr"],
+          "allowed_exchanges":["NYSE","NASDAQ","AMEX"],
           "source_total":len(rows),
           "scope":dict(scopes),
           "scope_provisional_pass":len(eligible),
