@@ -26,7 +26,8 @@ HEADERS={"User-Agent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome
          "Accept":"application/json","Origin":"https://www.tradingview.com","Referer":"https://www.tradingview.com/screener/"}
 US_EXCH={"NASDAQ","NYSE","AMEX","NYSE MKT"}
 INSTRUMENT_NOT_COMMON=re.compile(r"\b(warrants?|units? consisting|subscription rights?|depositary shares representing preferred|"
-                                 r"preferred stock|preferred shares|senior notes due|exchange.traded fund|"
+                                 r"preferred stock|preferred shares|pfd|perp pfd|deposit(?:ary)? shs repr|"
+                                 r"cum conv|subordinated debentures|bonds|senior notes|exchange.traded fund|"
                                  r"etfs?|etns?|acquisition corp(?:oration)?|acquisition co(?:mpany)?)\b",re.I)
 
 def fnum(x):
@@ -135,7 +136,7 @@ def label(row,sector_median):
     return [k for k,v in B.items() if v]
 
 def cross_check_close(rows):
-    """Small independent close-price verification, not historical-download prerequisite."""
+    """Independent completed-session crosscheck; exceptions are held separately."""
     try:
         import io,pandas as pd
         u=f"https://marketparquet.com/api/data/download/stock_daily/{ASOF}.parquet"
@@ -143,23 +144,34 @@ def cross_check_close(rows):
         y=pd.read_parquet(io.BytesIO(response.content))
         y=y[y.asset_type.astype(str).str.lower()=="stock"]
         ref={str(x.symbol):float(x.close) for x in y.itertuples() if x.close>0}
-        checks=[]
+        checks=[];outliers=[];matched=set()
         for r in rows:
             k=r.get("name");price=fnum(r.get("close"))
             if k in ref and price is not None:
-                checks.append(abs(price-ref[k])/ref[k])
+                delta=abs(price-ref[k])/ref[k]
+                checks.append(delta);matched.add(k)
+                if delta>=.005:
+                    outliers.append(dict(symbol=k,exchange=r.get("exchange"),marketparquet=ref[k],
+                                         tradingview=price,relative_gap=delta,stage=r.get("status")))
+        write_csv(OUTPUT/"price_discrepancies.csv",outliers,[
+            "symbol","exchange","marketparquet","tradingview","relative_gap","stage"])
+        only_mp=[{"symbol":s,"marketparquet_close":p} for s,p in ref.items() if s not in matched]
+        write_csv(OUTPUT/"coverage_gaps_mp_only.csv",only_mp,["symbol","marketparquet_close"])
         if not checks:raise RuntimeError("No overlapping independent prices")
-        good=sum(v<.005 for v in checks)
+        good=len(checks)-len(outliers)
         result={"independent_source":"MarketParquet","reference_date":ASOF,
-                "matched":len(checks),"within_0_5pct":good,"pct_within_0_5pct":good/len(checks),
-                "worst_100th_pct":max(checks)}
-        # If the quote feed has rolled over to another trading session, don't make an as-of claim.
+                "marketparquet_total":len(ref),
+                "matched":len(checks),"within_0_5pct":good,
+                "pct_within_0_5pct":good/len(checks),
+                "source_missing_or_unmatched":len(only_mp),
+                "price_outliers":len(outliers),
+                "max_relative_gap":max(checks),
+                "_outliers":[r["symbol"] for r in outliers]}
         if result["pct_within_0_5pct"]<.90:
             raise RuntimeError("As-of mismatch vs completed-session reference")
         return result
     except Exception as e:
-        # Unable to certify exact end-of-day as-of. Continue universe query, but mark unverified.
-        return {"asof_verified":False,"error":str(e)}
+        return {"asof_verified":False,"error":str(e),"price_outliers":None}
 
 def main():
     rows=get_tv_all()
@@ -195,6 +207,16 @@ def main():
     shadow=rng.sample(excluded,min(len(excluded),max(100,int(.07*len(excluded))))) if excluded else []
     for r in shadow:r["shadow_sample"]=True
     verify=cross_check_close(eligible)
+    bad_quotes=set(verify.pop("_outliers",[]))
+    if bad_quotes:
+        old_selected=selected
+        selected=[]
+        for r in old_selected:
+            if r["name"] in bad_quotes:
+                r["status"]="PRICE_SOURCE_MISMATCH_HOLD"
+                deferred.append(r)
+            else:selected.append(r)
+        print("CROSS_SOURCE_PRICE_HOLD",len(old_selected)-len(selected),flush=True)
     common=[
       "id","name","description","exchange","type","sector","industry","close",
       "SMA20","SMA50","SMA200","Perf.W","Perf.1M","Perf.3M","Perf.6M",
