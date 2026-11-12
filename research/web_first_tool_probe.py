@@ -37,3 +37,25 @@ try:
        "totalCount",sample.get("totalCount") if isinstance(sample,dict) else None,
        "preview",str(sample)[:220] if sample is not None else r.text[:170],flush=True)
 except Exception as e: print("PROBE_ERROR","tradingview_scanner",type(e).__name__,str(e)[:160],flush=True)
+
+COLS=[
+"name","description","exchange","type","close","SMA20","SMA50","SMA200",
+"Perf.W","Perf.1M","Perf.3M","Perf.6M","Volatility.D",
+"relative_volume_10d_calc","average_volume_10d_calc","volume",
+"market_cap_basic","sector","industry","ATR","RSI","change",
+]
+for cols in [COLS,["name","description","close","SMA20","SMA50","SMA200","Perf.1M","Perf.3M",
+     "relative_volume_10d_calc","volume","market_cap_basic","sector","industry"]]:
+ try:
+  j={"filter":[{"left":"type","operation":"equal","right":"stock"}],
+     "symbols":{"query":{"types":[]}},"columns":cols,"sort":{"sortBy":"name","sortOrder":"asc"},"range":[0,6500]}
+  r=s.post("https://scanner.tradingview.com/america/scan",json=j,timeout=45,
+      headers={"Content-Type":"application/json","Origin":"https://www.tradingview.com"})
+  j2=r.json() if "json" in r.headers.get("content-type","") else {}
+  print("TV_BULK","status",r.status_code,"columns",len(cols),"total",j2.get("totalCount"),
+        "rows",len(j2.get("data",[])), "bytes",len(r.content),"error",str(j2)[:450] if not r.ok else None,flush=True)
+  if r.ok:
+   print("TV_FIELDS",cols,flush=True)
+   print("TV_FIRST",j2.get("data",[])[:2],flush=True)
+   print("TV_LAST",j2.get("data",[])[-2:],flush=True)
+ except Exception as e: print("TV_BULK_ERROR",type(e).__name__,str(e)[:180],flush=True)
