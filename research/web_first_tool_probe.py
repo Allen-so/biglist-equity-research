@@ -59,3 +59,21 @@ for cols in [COLS,["name","description","close","SMA20","SMA50","SMA200","Perf.1
    print("TV_FIRST",j2.get("data",[])[:2],flush=True)
    print("TV_LAST",j2.get("data",[])[-2:],flush=True)
  except Exception as e: print("TV_BULK_ERROR",type(e).__name__,str(e)[:180],flush=True)
+
+for tag,extra in [
+ ("type_stock_dr", [{"left":"type","operation":"in_range","right":["stock","dr"]}]),
+ ("exchange_only", [{"left":"exchange","operation":"in_range","right":["NYSE","NASDAQ","AMEX"]}]),
+ ("venue_and_stockdr", [{"left":"exchange","operation":"in_range","right":["NYSE","NASDAQ","AMEX"]},{"left":"type","operation":"in_range","right":["stock","dr"]}])
+]:
+ try:
+  req={"filter":extra,"symbols":{"query":{"types":[]}},"columns":["name","description","type","exchange","close"],"range":[0,10]}
+  rr=s.post("https://scanner.tradingview.com/america/scan",json=req,timeout=20,headers={"Origin":"https://www.tradingview.com"})
+  j=rr.json()
+  print("VARIANT",tag,"status",rr.status_code,"count",j.get("totalCount"),"data",j.get("data",[])[:2],"error",str(j)[:160] if not rr.ok else None,flush=True)
+ except Exception as e:print("VARIANT_ERROR",tag,str(e)[:160],flush=True)
+try:
+ req={"filter":[],"symbols":{"tickers":["NASDAQ:ASML","NASDAQ:ARM","NASDAQ:RYAAY","NYSE:RTO","NYSE:TIMB","NYSE:MNSO","NASDAQ:ABVX"]},
+      "columns":["name","description","type","exchange","close"],"range":[0,20]}
+ rr=s.post("https://scanner.tradingview.com/america/scan",json=req,timeout=20,headers={"Origin":"https://www.tradingview.com"})
+ print("ADR_TICKER_PROBE",rr.status_code,str(rr.json())[:2000],flush=True)
+except Exception as e:print("ADR_PROBE_ERROR",str(e)[:150],flush=True)
