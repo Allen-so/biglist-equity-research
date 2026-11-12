@@ -1,0 +1,27 @@
+name: GPT Big List 2026-11-12 fresh web data
+on:
+  push:
+    branches: [research/gpt-biglist-web-first-v2]
+    paths:
+      - research/gpt_web_snapshot_20261112.py
+      - .github/workflows/gpt-web-snapshot-20261112.yml
+permissions:
+  contents: read
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip -q install requests pandas pyarrow
+      - run: python -u research/gpt_web_snapshot_20261112.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gpt-biglist-web-snapshot-nov12-preopen
+          path: web_snapshot_20261112/
+          if-no-files-found: warn
+          retention-days: 7
