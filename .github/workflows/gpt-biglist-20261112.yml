@@ -2,7 +2,10 @@ name: GPT Big List full market 26 steps
 on:
   push:
     branches: [research/gpt-biglist-20261112]
-    paths: [.github/workflows/gpt-biglist-20261112.yml]
+    paths: [.github/workflows/gpt-biglist-20261112.yml, research/gpt_biglist_formal_scan.py]
+concurrency:
+  group: gpt-biglist-20261112
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:
