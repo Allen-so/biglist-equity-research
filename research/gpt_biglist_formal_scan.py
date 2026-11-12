@@ -89,7 +89,7 @@ def get_history(syms, batch=50):
         y=[s.replace(".","-") for s in b]
         try:
             d=yf.download(y,start=START,end=END,auto_adjust=False,group_by="ticker",
-                          progress=False,threads=8,timeout=25,repair=False)
+                          progress=False,threads=5,timeout=25,repair=False)
         except Exception as e:
             print("DOWNLOAD_BLOCK_ERR",start,str(e)[:160],flush=True)
             d=pd.DataFrame()
@@ -325,6 +325,25 @@ def classify_theme(row):
 def run():
     started=time.time()
     uni=load_universe()
+    stage=os.environ.get("BIGLIST_STAGE","full")
+    syms=uni.symbol.tolist()
+    if stage=="download":
+        shard=int(os.environ.get("BIGLIST_SHARD","0"))
+        n_shards=int(os.environ.get("BIGLIST_N_SHARDS","4"))
+        partition=syms[shard::n_shards]
+        print("SHARD",shard,"/",n_shards,"INPUT",len(partition),flush=True)
+        hist,status=get_history(partition)
+        parts=[]
+        for symbol,z in hist.items():
+            q=z.reset_index().rename(columns={z.index.name or "index":"date"})
+            q["symbol"]=symbol
+            parts.append(q[["symbol","date","Open","High","Low","Close","Volume"]])
+        if parts:
+            pd.concat(parts,ignore_index=True).to_parquet(OUT/("history_%d.parquet"%shard),index=False)
+        with (OUT/("history_status_%d.json"%shard)).open("w") as o:json.dump(status,o)
+        print("SHARD_COMPLETE",shard,"input",len(partition),"downloaded",len(hist),
+              "failed",len(partition)-len(hist),flush=True)
+        return
     report_step(1,"Market regime inputs",None,"SPY QQQ IWM RSP VIX TNX and sector ETFs")
     rep= yf.download(BE,start=START,end=END,auto_adjust=False,progress=False,
                      group_by="ticker",threads=8,timeout=25)
@@ -354,12 +373,28 @@ def run():
     if len(ben.get("SPY",[]))<80 or ben["SPY"].index[-1] <ASOF:
         raise RuntimeError("SPY benchmark not available as of final session")
     spy=ben["SPY"]
-    syms=uni.symbol.tolist()
-    hist,status=get_history(syms)
+    if stage=="score":
+        parts=sorted(OUT.glob("history_*.parquet"))
+        states=sorted(OUT.glob("history_status_*.json"))
+        print("MERGE_PARTITIONS",len(parts),"status_files",len(states),flush=True)
+        if len(parts)<4 or len(states)<4:
+            raise RuntimeError("Not all four full-market shards are present")
+        panel=pd.concat([pd.read_parquet(p) for p in parts],ignore_index=True)
+        panel["date"]=pd.to_datetime(panel.date).dt.tz_localize(None).dt.normalize()
+        hist={}
+        for symbol,z in panel.groupby("symbol",sort=False):
+            hist[symbol]=z.set_index("date")[["Open","High","Low","Close","Volume"]].sort_index()
+        status={}
+        for p in states:
+            with p.open() as q:status.update(json.load(q))
+        if len(status)!=len(uni):
+            raise RuntimeError("Incomplete union of shard status: %d/%d"%(len(status),len(uni)))
+    else:
+        hist,status=get_history(syms)
     covered=len(hist)
     report_step(2,"Data coverage / Regime capacity",covered,"History >=80 and fresh Nov11; subsequent gates only on covered symbols")
     cov=pd.DataFrame({"symbol":list(status),"history_status":[status[s] for s in status]})
-    cov=cov.merge(uni[["symbol","name","sector"]],on="symbol",how="left")
+    cov=cov.merge(uni[["symbol","name","sector"]].reset_index(drop=True),on="symbol",how="left")
     cov.to_csv(OUT/"data_coverage.csv",index=False)
     feat=[]
     for j,(s,z) in enumerate(hist.items()):
