@@ -335,6 +335,22 @@ def run():
             z.index=pd.to_datetime(z.index).tz_localize(None).normalize()
             ben[b]=z.loc[z.index<=ASOF]
         except Exception:ben[b]=pd.Series(dtype=float)
+    # Yahoo's shared SQLite timezone cache can transiently lock when multi-threading benchmarks.
+    # Retry each required benchmark on its own, with threads disabled.
+    for b in BE:
+        v=ben.get(b,pd.Series(dtype=float))
+        if len(v)>=80 and v.index[-1]>=ASOF:continue
+        try:
+            d1=yf.download(b,start=START,end=END,auto_adjust=False,progress=False,
+                           threads=False,timeout=25,group_by="ticker")
+            if isinstance(d1.columns,pd.MultiIndex):
+                if b in d1.columns.get_level_values(0):d1=d1[b]
+                else:d1=d1.xs(b,level=1,axis=1)
+            q=d1["Close"].dropna()
+            q.index=pd.to_datetime(q.index).tz_localize(None).normalize()
+            ben[b]=q.loc[q.index<=ASOF]
+            print("BENCHMARK_RETRY",b,len(ben[b]),flush=True)
+        except Exception as e:print("BENCHMARK_ERROR",b,repr(e)[:180],flush=True)
     if len(ben.get("SPY",[]))<80 or ben["SPY"].index[-1] <ASOF:
         raise RuntimeError("SPY benchmark not available as of final session")
     spy=ben["SPY"]
