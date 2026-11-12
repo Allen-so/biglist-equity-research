@@ -1,4 +1,4 @@
-name: GPT Big List data probe
+name: GPT Big List full market 26 steps
 on:
   push:
     branches: [research/gpt-biglist-20261112]
@@ -6,53 +6,25 @@ on:
 permissions:
   contents: read
 jobs:
-  probe:
+  full-market:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Probe public full-market OHLCV feed
-        run: |
-          pip -q install pandas pyarrow requests yfinance
-          python - <<'PY'
-          import requests,io,pandas as pd,datetime,yfinance as yf
-          U='https://marketparquet.com/api/data/download/stock_daily/'
-          for d in ['2026-11-11','2026-11-10','2026-10-15','2026-08-03']:
-              try:
-                  r=requests.get(U+d+'.parquet',timeout=35,headers={'User-Agent':'BigList-research/1.0'})
-                  print('PARQUET',d,r.status_code,len(r.content),r.url,r.headers.get('content-type'),flush=True)
-                  if r.ok:
-                      frame=pd.read_parquet(io.BytesIO(r.content))
-                      print('BARS',d,len(frame),list(frame.columns),frame.head(2).to_dict('records'),flush=True)
-              except Exception as e:print('PARQUET_ERROR',d,type(e).__name__,str(e)[:150],flush=True)
-          for x in ['SPY','AAPL']:
-              try:
-                  df=yf.download(x,start='2026-10-10',end='2026-11-12',progress=False,auto_adjust=False,threads=False)
-                  print('YAHOO',x,len(df),str(df.tail(1)),flush=True)
-              except Exception as e:print('YAHOO_ERROR',x,repr(e)[:160],flush=True)
-          PY
-
-      - name: Probe 300-symbol historical batch
-        run: |
-          python - <<'PY'
-          import pandas as pd,requests,io,yfinance as yf,time
-          d=pd.read_parquet(io.BytesIO(requests.get('https://marketparquet.com/api/data/download/stock_daily/2026-11-11.parquet',timeout=30).content))
-          symbols=d['symbol'].dropna().astype(str).tolist()[:300]
-          t=time.time();good=set();bad=[]
-          for k in range(0,len(symbols),50):
-              block=symbols[k:k+50]
-              try:
-                  q=yf.download(block,start="2025-10-01",end="2026-11-12",auto_adjust=True,progress=False,threads=8,group_by='ticker',timeout=20)
-                  ok=0
-                  for sym in block:
-                      try:
-                          x=q[sym].dropna(subset=['Close'])
-                          if len(x)>150:good.add(sym);ok+=1
-                      except Exception:pass
-                  print('BATCH',k,ok,len(block),'elapsed',round(time.time()-t,1),flush=True)
-              except Exception as e:print('BATCH_ERR',k,repr(e)[:150],flush=True)
-          print('BATCH_TOTAL',len(good),len(symbols),'sec',round(time.time()-t,1),flush=True)
-          PY
+      - name: Install scanner dependencies
+        run: python -m pip install -q numpy pandas pyarrow requests yfinance
+      - name: Compile-check independent 26-step scanner
+        run: python -m py_compile research/gpt_biglist_formal_scan.py
+      - name: Run all-universe scan (no symbol limit)
+        run: python -u research/gpt_biglist_formal_scan.py
+      - name: Upload audit and complete score outputs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gpt-biglist-2026-11-11-full-market-results
+          path: gpt_biglist_outputs/
+          retention-days: 14
+          if-no-files-found: warn
