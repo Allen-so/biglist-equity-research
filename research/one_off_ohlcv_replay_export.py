@@ -21,6 +21,12 @@ for fname in history_files:
     sl=frame.loc[frame.symbol.isin(targets),["symbol","date","Open","High","Low","Close","Volume"]]
     print("DATA_PART",fname.name,"total",len(frame),"extracted",len(sl),flush=True)
     parts.append(sl)
+    # For full-market Rank Delta, retain cheap 80-session closing prices for every ticker.
+    full_close=frame.loc[:,["symbol","date","Close"]].copy()
+    full_close["date"]=pd.to_datetime(full_close.date).dt.tz_localize(None).dt.normalize()
+    full_close=full_close.loc[(full_close.date<=pd.Timestamp("2026-11-11")) & (full_close.date>=pd.Timestamp("2026-07-15"))]
+    full_close.to_csv(ROOT/f"full_market_close_{fname.stem}.csv.gz",index=False,compression="gzip")
+    print("FULL_MARKET_RANK_PART",fname.name,len(full_close),flush=True)
 data=pd.concat(parts,ignore_index=True)
 data["date"]=pd.to_datetime(data.date).dt.tz_localize(None).dt.normalize()
 data=data.loc[data.date<=pd.Timestamp("2026-11-11")]
