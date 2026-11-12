@@ -1,0 +1,36 @@
+name: GPT Big List data probe
+on:
+  push:
+    branches: [research/gpt-biglist-20261112]
+    paths: [.github/workflows/gpt-biglist-20261112.yml]
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Probe public full-market OHLCV feed
+        run: |
+          pip -q install pandas pyarrow requests yfinance
+          python - <<'PY'
+          import requests,io,pandas as pd,datetime,yfinance as yf
+          U='https://marketparquet.com/api/data/download/stock_daily/'
+          for d in ['2026-11-11','2026-11-10','2026-10-15','2026-08-03']:
+              try:
+                  r=requests.get(U+d+'.parquet',timeout=35,headers={'User-Agent':'BigList-research/1.0'})
+                  print('PARQUET',d,r.status_code,len(r.content),r.url,r.headers.get('content-type'),flush=True)
+                  if r.ok:
+                      frame=pd.read_parquet(io.BytesIO(r.content))
+                      print('BARS',d,len(frame),list(frame.columns),frame.head(2).to_dict('records'),flush=True)
+              except Exception as e:print('PARQUET_ERROR',d,type(e).__name__,str(e)[:150],flush=True)
+          for x in ['SPY','AAPL']:
+              try:
+                  df=yf.download(x,start='2026-10-10',end='2026-11-12',progress=False,auto_adjust=False,threads=False)
+                  print('YAHOO',x,len(df),str(df.tail(1)),flush=True)
+              except Exception as e:print('YAHOO_ERROR',x,repr(e)[:160],flush=True)
+          PY
