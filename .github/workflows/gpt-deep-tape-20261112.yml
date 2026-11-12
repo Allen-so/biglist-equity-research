@@ -1,0 +1,44 @@
+name: GPT Big List web-first deep tape analysis
+on:
+  push:
+    branches: [research/gpt-biglist-web-first-v2]
+    paths:
+      - .github/workflows/gpt-deep-tape-20261112.yml
+permissions:
+  contents: read
+  actions: read
+jobs:
+  deep-tape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip -q install pandas numpy pyarrow
+      - name: Download prior completed-session raw OHLCV archives
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 43180105060
+          github-token: ${{ github.token }}
+          pattern: gpt-biglist-history-shard-*
+          path: history_inputs
+          merge-multiple: true
+      - name: Download actual web screener prefilter results
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 43195934117
+          github-token: ${{ github.token }}
+          name: gpt-biglist-web-first-v2-20261111
+          path: web_inputs
+      - run: python -m py_compile research/gpt_deep_tape_20261112.py
+      - name: Compute real Wilder ATR, velocity, flow, structure and overhead scenarios
+        run: python -u research/gpt_deep_tape_20261112.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gpt-biglist-20261111-deep-tape-audit
+          path: gpt_deep_out/
+          retention-days: 14
+          if-no-files-found: warn
