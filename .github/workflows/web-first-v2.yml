@@ -1,0 +1,30 @@
+name: GPT Big List v2 web-first preflight
+on:
+  push:
+    branches: [research/gpt-biglist-web-first-v2]
+    paths:
+      - research/web_first_screener_v2.py
+      - .github/workflows/web-first-v2.yml
+permissions:
+  contents: read
+jobs:
+  screener:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip -q install requests pandas pyarrow
+      - run: python -m py_compile research/web_first_screener_v2.py
+      - name: Scan every US exchange stock with public web screener technicals
+        run: python -u research/web_first_screener_v2.py
+      - name: Export web preflight files and coverage audit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gpt-biglist-web-first-v2-20261111
+          path: gpt_webfirst_outputs/
+          if-no-files-found: warn
+          retention-days: 14
