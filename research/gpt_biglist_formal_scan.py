@@ -132,7 +132,7 @@ def price_and_volume_features(k,z,spy,regime):
     c=z.Close.astype(float); h=z.High.astype(float); l=z.Low.astype(float); v=z.Volume.astype(float)
     p=float(c.iloc[-1]);n=len(z)
     tr=pd.concat([(h-l),(h-c.shift(1)).abs(),(l-c.shift(1)).abs()],axis=1).max(axis=1)
-    atr=float(tr.tail(14).mean())
+    atr=float(tr.tail(20).mean())
     atr=max(0.005,atr)
     ref=spy.reindex(c.index).ffill()
     daily=c.pct_change()
@@ -190,16 +190,16 @@ def price_and_volume_features(k,z,spy,regime):
     # not a factual target, is available.
     overhead=(high52-p) if high52>p else 4*atr
     rr=(overhead/stop_r) if np.isfinite(stop_r) and stop_r>0 else np.nan
-    ready=(constructive and abs(dist_pivot)<=.04 and
+    ready=(constructive and -.4<=(prev20_high-p)/atr<=.8 and
            np.isfinite(ext20) and ext20<2.2 and
            (compressed or hl or (p>prev20_high and rvol>=1.4)))
-    developing=(constructive and hl and dist_pivot>=-.04 and
-                dist_pivot<=.11 and (compressed or volume5<volprev))
+    developing=(constructive and hl and .8<(prev20_high-p)/atr<=1.8 and
+                (compressed or volume5<volprev))
     actionable=bool((ready or developing) and
                     np.isfinite(stop_atr) and .55<=stop_atr<=2.5 and
                     np.isfinite(rr) and rr>=3.0 and
                     np.isfinite(ext20) and ext20<2.5 and
-                    p>=3.0 and p*vol20>=2e6)
+                    p>=4.0 and float((c*v).tail(20).median())>=8e6)
     pureext=bool(np.isfinite(ext20) and (ext20>2.5 or pivot_atr>2.5))
     if expansion and compressed and hl:
         setup="ECR/VCP"
@@ -215,7 +215,7 @@ def price_and_volume_features(k,z,spy,regime):
     progress=abs(rt(20))/max(1e-8,step15) if np.isfinite(rt(20)) else 0
     distribution=int(((daily<-.025)&(v>v.rolling(20).mean())).tail(30).sum())
     return dict(symbol=k,bars=n,asof=str(z.index[-1].date()),price=p,volume=float(v.iloc[-1]),
-        dollarvol20=p*vol20,atr14=atr,adr20=float(((h-l)/c.shift(1)).tail(20).mean()),
+        dollarvol20=p*vol20,median_dollarvol20=float((c*v).tail(20).median()),atr20=atr,adr20=float(((h-l)/c.shift(1)).tail(20).mean()),
         rvol=rvol,ma10=m10,ma20=m20,ma50=m50,ma200=m200,
         ret5=rt(5),ret10=rt(10),ret20=rt(20),ret60=rt(60),ret120=rt(120),ret250=rt(250),
         old_rs20=oldrs(20,20),old_rs60=oldrs(60,20),old_rs120=oldrs(120,20),
@@ -265,8 +265,8 @@ def score_all(frame,regime):
         clip01(f.rvol,.7,2.2)*.25+
         (1-clip01(f.distribution,1,6))*.25)
     f["factor_Progress Retention"]=clip01(f.retention,.2,.9)*.75+f.higher_low.astype(float)*.25
-    f["factor_Persistent RS"]=(pct(f.rs5)*.15+pct(f.rs20)*.25+pct(f.rs60)*.30+
-        pct(f.rs120)*.15+clip01(f.stress_rs,-.005,.009)*.15)
+    f["factor_Persistent RS"]=(.85*(pct(f.rs5)*.20+pct(f.rs20)*.35+pct(f.rs60)*.45)+
+        .15*clip01(f.stress_rs,-.005,.009))
     f["factor_Rank Level + Rank Delta"]=f.rank_level*.6+clip01(f.rank_delta,-.30,.30)*.4
     f["factor_Within-Theme Leadership"]=f.theme_rank
     f["factor_Fundamental Delta / Catalyst"]=0.0
@@ -382,7 +382,7 @@ def run():
     risk_off=(not above("SPY") and not above("QQQ") and breadth<.35)
     regime="RISK_ON" if risk_on else "DEFENSIVE" if risk_off else "SELECTIVE_MIXED"
     capacity=40 if risk_on else 15 if risk_off else 25
-    minimum=68 if risk_on else 78 if risk_off else 73
+    minimum=75 if risk_on else 82 if risk_off else 80
     print("REGIME",regime,"CAPACITY",capacity,"THRESHOLD",minimum,
           "breadth50",round(breadth,3),"VIX",vix,flush=True)
     report_step(3,"Theme and rotation map",len(df),"All priced stocks, no thematic pre-selection")
