@@ -1,0 +1,28 @@
+name: GPT Big List targeted one-hour OHLCV evidence
+on:
+  push:
+    branches: [research/gpt-biglist-web-first-v2]
+    paths: 
+      - research/one_off_intraday_evidence.py
+      - .github/workflows/gpt-biglist-intraday-oneoff.yml
+permissions:
+  contents: read
+jobs:
+  evidence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip -q install pandas yfinance
+      - name: Fetch NYSE sessions one-hour bars for finalist-eligible research names
+        run: python -u research/one_off_intraday_evidence.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gpt-biglist-intraday-20261111-oneoff
+          path: intraday_evidence/
+          if-no-files-found: warn
+          retention-days: 7
