@@ -9,25 +9,67 @@ concurrency:
 permissions:
   contents: read
 jobs:
-  full-market:
+  histories:
+    name: Fetch full-universe history shard ${{ matrix.shard }}
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Install scanner dependencies
-        run: python -m pip install -q numpy pandas pyarrow requests yfinance
-      - name: Compile-check independent 26-step scanner
-        run: python -m py_compile research/gpt_biglist_formal_scan.py
-      - name: Run all-universe scan (no symbol limit)
+      - run: python -m pip install -q numpy pandas pyarrow requests yfinance
+      - run: python -m py_compile research/gpt_biglist_formal_scan.py
+      - name: Fetch full market history partition
+        env:
+          BIGLIST_STAGE: download
+          BIGLIST_SHARD: ${{ matrix.shard }}
+          BIGLIST_N_SHARDS: '4'
         run: python -u research/gpt_biglist_formal_scan.py
-      - name: Upload audit and complete score outputs
+      - uses: actions/upload-artifact@v4
         if: always()
-        uses: actions/upload-artifact@v4
         with:
-          name: gpt-biglist-2026-11-11-full-market-results
-          path: gpt_biglist_outputs/
+          name: gpt-biglist-history-shard-${{ matrix.shard }}
+          path: |
+            gpt_biglist_outputs/history_*.parquet
+            gpt_biglist_outputs/history_status_*.json
+          retention-days: 3
+          if-no-files-found: warn
+  score:
+    name: Merge all histories, score entire universe, audit 26 steps
+    needs: histories
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -q numpy pandas pyarrow requests yfinance
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: gpt-biglist-history-shard-*
+          path: gpt_biglist_outputs
+          merge-multiple: true
+      - name: Full-universe factor scoring and capital-rotation audit
+        env:
+          BIGLIST_STAGE: score
+        run: python -u research/gpt_biglist_formal_scan.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gpt-biglist-2026-11-11-final-audit
+          path: |
+            gpt_biglist_outputs/universe_all_asof.csv
+            gpt_biglist_outputs/data_coverage.csv
+            gpt_biglist_outputs/full_market_scored.csv
+            gpt_biglist_outputs/final_biglist.csv
+            gpt_biglist_outputs/top250_audit.csv
+            gpt_biglist_outputs/sector_rotation.csv
+            gpt_biglist_outputs/summary.json
           retention-days: 14
           if-no-files-found: warn
