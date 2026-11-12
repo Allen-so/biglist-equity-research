@@ -1,0 +1,43 @@
+name: GPT Big List one-off OHLCV audit export
+on:
+  push:
+    branches: [research/gpt-biglist-web-first-v2]
+    paths:
+      - research/one_off_ohlcv_replay_export.py
+      - .github/workflows/gpt-biglist-ohlcv-audit-export.yml
+permissions:
+  contents: read
+  actions: read
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip -q install pandas pyarrow numpy yfinance
+      - uses: actions/download-artifact@v4
+        with:
+          run-id: '43180105060'
+          pattern: gpt-biglist-history-shard-*
+          merge-multiple: true
+          path: history
+          github-token: ${{ github.token }}
+      - uses: actions/download-artifact@v4
+        with:
+          run-id: '43200379602'
+          name: gpt-biglist-20261111-deep-tape-audit
+          path: audit
+          github-token: ${{ github.token }}
+      - run: find history audit -maxdepth 4 -type f | sort | head -30
+      - name: Extract complete replay OHLCV evidence and sector benchmarks
+        run: python -u research/one_off_ohlcv_replay_export.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gpt-biglist-ohlcv-replay-data-20261111
+          path: diagnostic_files/
+          if-no-files-found: warn
+          retention-days: 7
