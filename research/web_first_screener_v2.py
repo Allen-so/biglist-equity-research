@@ -3,7 +3,7 @@
 
 Uses the public web site's US stock scanner for cheap technical columns.
 Does not bypass authentication or paywalls; fails closed when feed is blocked.
-Every US-listed common-stock-like ticker is evaluated across 9 OR lanes.
+Every US-listed common-stock-like ticker is evaluated across 10 OR lanes.
 Exports candidate and coverage audit; no score, final eligibility or buy signal.
 """
 from __future__ import annotations
@@ -134,6 +134,7 @@ def label(row,sector_median):
     B["G_YOUNG_OR_SHORT_HISTORY"]=(q200 is None) and ge(q20,.95) and gt(r20,.02) and gt(rvol,1.1)
     B["H_MODERATE_REPAIR"]=between(q20,.95,1.08) and gt(q50,.98) and gt(r20,.03) and gt(rvol,1)
     B["I_STRONG_LOW_VOLUME_HOLD"]=gt(q20,1.04) and gt(q50,1.03) and gt(r5,0) and gt(r20,0) and between(rvol,0,1.2)
+    B["J_FIRST_PULLBACK"]=gt(q20,1.03) and gt(q50,1.04) and gt(r20,.06) and between(r5,-.05,.01) and between(rvol,0,.90)
     return [k for k,v in B.items() if v]
 
 def cross_check_close(rows):
@@ -230,7 +231,7 @@ def main():
     with (OUTPUT/"web_preflight_summary.json").open("w") as f:
         json.dump({
           "asof_requested":ASOF,
-          "product":"GPT Big List - Web First preflight v0.3",
+          "product":"GPT Big List - Web First preflight v0.4",
           "is_formal_26_layer_final":False,
           "source":"TradingView website public scan endpoint; unofficial/availability not guaranteed",
           "security_types":["stock","dr"],
